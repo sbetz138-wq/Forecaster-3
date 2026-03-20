@@ -1,0 +1,49 @@
+name: Build and Commit Stepped Care Dashboard
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '5 13 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build dashboard
+        run: |
+          python build_dashboard.py --input data/Stepped_Care_Tracking.csv --output output/stepped_care_dashboard.xlsx
+
+      - name: Commit workbook if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/stepped_care_dashboard.xlsx
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update stepped care dashboard"
+            git push
+          fi
+
+      - name: Upload workbook artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stepped-care-dashboard
+          path: output/stepped_care_dashboard.xlsx
